@@ -1,19 +1,32 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Windows.Forms;
 
 namespace ComputerInfo
 {
     class InfoForm : Form
     {
+        private TabControl tabControl;
+        private TabPage infoTab;
+        private TabPage settingsTab;
+        private CheckBox chkAutoStart;
+        private TextBox txtboxNom;
+        private TextBox txtboxCognoms;
         public InfoForm(string computerName, string osInfo)
         {
             this.Text = "Informació de l'ordinador";
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.MaximizeBox= false;
+            this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.ClientSize = new System.Drawing.Size(300, 200);
+            this.ClientSize = new System.Drawing.Size(500, 200);
 
+            tabControl = new TabControl
+            {
+                Dock = DockStyle.Fill
+            };
+
+            infoTab = new TabPage("Informació");
             var label = new Label
             {
                 AutoSize = true,
@@ -21,7 +34,79 @@ namespace ComputerInfo
                 Text = $"Nom de l'ordinador: {computerName}\n" +
                        $"Sistema Operatiu: {osInfo}"
             };
-            this.Controls.Add(label);
+            infoTab.Controls.Add(label);
+
+            settingsTab = new TabPage("Configuració");
+            chkAutoStart = new CheckBox
+            {
+                Text = "Iniciar automàticament al iniciar Windows",
+                AutoSize = true,
+                Location = new System.Drawing.Point(10, 20)
+            };
+            chkAutoStart.Checked = IsAutoStartEnabled();
+            chkAutoStart.CheckedChanged += ChkAutoStart_CheckedChanged;
+            settingsTab.Controls.Add(chkAutoStart);
+
+            var labelNom = new Label
+            {
+                Text = "Nom:",
+                AutoSize = true,
+                Location = new System.Drawing.Point(10, 50)
+            };
+            txtboxNom = new TextBox
+            {
+                Location = new System.Drawing.Point(100, 50),
+                Width = 200
+            };
+            settingsTab.Controls.Add(labelNom);
+            settingsTab.Controls.Add(txtboxNom);
+
+            var labelCognoms = new Label
+            {
+                Text = "Cognoms:",
+                AutoSize = true,
+                Location = new System.Drawing.Point(10, 80)
+            };
+            txtboxCognoms = new TextBox
+            {
+                Location = new System.Drawing.Point(100, 80),
+                Width = 200
+            };
+            settingsTab.Controls.Add(labelCognoms);
+            settingsTab.Controls.Add(txtboxCognoms);
+
+            tabControl.TabPages.Add(infoTab);
+            tabControl.TabPages.Add(settingsTab);
+
+            this.Controls.Add(tabControl);
+        }
+
+        private void ChkAutoStart_CheckedChanged(object sender, EventArgs e)
+        {
+            SetAutoStart(chkAutoStart.Checked);
+        }
+
+        private bool IsAutoStartEnabled()
+        {
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", false))
+            {
+                return key?.GetValue(Application.ProductName) != null;
+            }
+        }
+
+        private void SetAutoStart(bool enable)
+        {
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true))
+            {
+                if (enable)
+                {
+                    key.SetValue(Application.ProductName, Application.ExecutablePath);
+                }
+                else
+                {
+                    key.DeleteValue(Application.ProductName, false);
+                }
+            }
         }
     }
 }
