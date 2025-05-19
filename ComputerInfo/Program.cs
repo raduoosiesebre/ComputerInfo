@@ -39,6 +39,19 @@ namespace ComputerInfo
                     new MenuItem("Exit", (s, e) => ExitThread())
                 })
             };
+
+            trayIcon.MouseClick += TrayIcon_MouseClick;
+        }
+
+        private void TrayIcon_MouseClick(object sender, MouseEventArgs e)
+        {
+            if(e.Button == MouseButtons.Left)
+            {
+                string computerName = Environment.MachineName;
+                string osInfo = $"{Environment.OSVersion} (64-bit: {Environment.Is64BitOperatingSystem})";
+                var infoForm = new InfoForm(computerName, osInfo);
+                infoForm.ShowDialog();
+            }
         }
 
         protected override void ExitThreadCore()

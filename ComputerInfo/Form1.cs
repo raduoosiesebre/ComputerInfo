@@ -33,6 +33,8 @@ namespace ComputerInfo
             contextMenu.MenuItems.Add("Exit", (s, e) => Application.Exit());
             trayIcon.ContextMenu = contextMenu;
 
+            trayIcon.MouseClick += TrayIcon_MouseClick;
+
             this.WindowState = FormWindowState.Minimized;
             this.ShowInTaskbar = false;
         }
@@ -41,6 +43,17 @@ namespace ComputerInfo
         {
             trayIcon.Visible = false; // Hide tray icon when closing the form
             base.OnFormClosing(e);
+        }
+
+        private void TrayIcon_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                string computerName = Environment.MachineName;
+                string osInfo = $"{Environment.OSVersion.VersionString} {(Environment.Is64BitOperatingSystem ? "x64" : "x86")}";
+                var infoForm = new InfoForm(computerName, osInfo);
+                infoForm.ShowDialog();
+            }
         }
     }
 }
