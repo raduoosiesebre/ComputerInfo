@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.Windows.Forms;
+using ComputerInfo.Properties;
 
 namespace ComputerInfo
 {
@@ -58,6 +59,7 @@ namespace ComputerInfo
                 Location = new System.Drawing.Point(100, 50),
                 Width = 200
             };
+            txtboxNom.Text = Properties.Settings.Default.Nom;
             settingsTab.Controls.Add(labelNom);
             settingsTab.Controls.Add(txtboxNom);
 
@@ -72,6 +74,7 @@ namespace ComputerInfo
                 Location = new System.Drawing.Point(100, 80),
                 Width = 200
             };
+            txtboxCognoms.Text = Properties.Settings.Default.Cognoms;
             settingsTab.Controls.Add(labelCognoms);
             settingsTab.Controls.Add(txtboxCognoms);
 
@@ -107,6 +110,14 @@ namespace ComputerInfo
                     key.DeleteValue(Application.ProductName, false);
                 }
             }
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            Properties.Settings.Default.Nom = txtboxNom.Text;
+            Properties.Settings.Default.Cognoms = txtboxCognoms.Text;
+            Properties.Settings.Default.Save();
+            base.OnFormClosing(e);
         }
     }
 }
