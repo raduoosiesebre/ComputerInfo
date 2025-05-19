@@ -13,6 +13,7 @@ namespace ComputerInfo
         private CheckBox chkAutoStart;
         private TextBox txtboxNom;
         private TextBox txtboxCognoms;
+        private ComboBox comboTipusServeis;
         public InfoForm(string computerName, string osInfo)
         {
             this.Text = "Informació de l'ordinador";
@@ -78,6 +79,34 @@ namespace ComputerInfo
             settingsTab.Controls.Add(labelCognoms);
             settingsTab.Controls.Add(txtboxCognoms);
 
+            var labelTipusServeis = new Label
+            {
+                Text = "Tipus de servei:",
+                AutoSize = true,
+                Location = new System.Drawing.Point(10, 110)
+            };
+            settingsTab.Controls.Add(labelTipusServeis);
+
+            comboTipusServeis = new ComboBox
+            {
+                Location = new System.Drawing.Point(100, 110),
+                Width = 200,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            comboTipusServeis.Items.AddRange(new string[] { "No definit", "Arxiu", "Baixa", "Informàtica" });
+
+            if(!string.IsNullOrEmpty(Properties.Settings.Default.TipusServei) &&
+                comboTipusServeis.Items.Contains(Properties.Settings.Default.TipusServei))
+            {
+                comboTipusServeis.SelectedItem = Properties.Settings.Default.TipusServei;
+            }
+            else
+            {
+                comboTipusServeis.SelectedIndex = 0; // Default to the first item
+            }
+
+            settingsTab.Controls.Add(comboTipusServeis);
+
             tabControl.TabPages.Add(infoTab);
             tabControl.TabPages.Add(settingsTab);
 
@@ -116,6 +145,7 @@ namespace ComputerInfo
         {
             Properties.Settings.Default.Nom = txtboxNom.Text;
             Properties.Settings.Default.Cognoms = txtboxCognoms.Text;
+            Properties.Settings.Default.TipusServei = comboTipusServeis.SelectedItem?.ToString();
             Properties.Settings.Default.Save();
             base.OnFormClosing(e);
         }

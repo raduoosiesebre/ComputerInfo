@@ -46,5 +46,17 @@ namespace ComputerInfo.Properties {
                 this["Cognoms"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string TipusServei {
+            get {
+                return ((string)(this["TipusServei"]));
+            }
+            set {
+                this["TipusServei"] = value;
+            }
+        }
     }
 }
