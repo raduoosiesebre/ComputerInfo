@@ -1,5 +1,7 @@
 ﻿using Microsoft.Win32;
+using MySql.Data.MySqlClient;
 using System;
+using System.Drawing;
 using System.Windows.Forms;
 using ComputerInfo.Properties;
 
@@ -14,6 +16,8 @@ namespace ComputerInfo
         private TextBox txtboxNom;
         private TextBox txtboxCognoms;
         private ComboBox comboTipusServeis;
+        private Label lblDbStatus;
+
         public InfoForm(string computerName, string osInfo)
         {
             this.Text = "Informació de l'ordinador";
@@ -21,7 +25,7 @@ namespace ComputerInfo
             this.StartPosition = FormStartPosition.CenterScreen;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.ClientSize = new System.Drawing.Size(500, 200);
+            this.ClientSize = new System.Drawing.Size(1000, 200);
 
             tabControl = new TabControl
             {
@@ -95,7 +99,7 @@ namespace ComputerInfo
             };
             comboTipusServeis.Items.AddRange(new string[] { "No definit", "Arxiu", "Baixa", "Informàtica" });
 
-            if(!string.IsNullOrEmpty(Properties.Settings.Default.TipusServei) &&
+            if (!string.IsNullOrEmpty(Properties.Settings.Default.TipusServei) &&
                 comboTipusServeis.Items.Contains(Properties.Settings.Default.TipusServei))
             {
                 comboTipusServeis.SelectedItem = Properties.Settings.Default.TipusServei;
@@ -106,6 +110,17 @@ namespace ComputerInfo
             }
 
             settingsTab.Controls.Add(comboTipusServeis);
+
+            lblDbStatus = new Label
+            {
+                Text = "Comprovant connexió a la base de dades...",
+                AutoSize = true,
+                Location = new System.Drawing.Point(10, 150),
+                ForeColor = Color.Black
+            };
+            settingsTab.Controls.Add(lblDbStatus);
+
+            ComprovaConnexioBD();
 
             tabControl.TabPages.Add(infoTab);
             tabControl.TabPages.Add(settingsTab);
@@ -138,6 +153,26 @@ namespace ComputerInfo
                 {
                     key.DeleteValue(Application.ProductName, false);
                 }
+            }
+        }
+
+        private void ComprovaConnexioBD()
+        {
+            try
+            {
+                var env = EnvLoader.Load("config.env");
+                string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
+                using (var conn = new MySqlConnection(connStr))
+                {
+                    conn.Open();
+                    lblDbStatus.Text = "Connectat a la base de dades!";
+                    lblDbStatus.ForeColor = Color.Green;
+                }
+            }
+            catch (Exception ex)
+            {
+                lblDbStatus.Text = "Error de connexió a la base de dades: " + ex.Message;
+                lblDbStatus.ForeColor = Color.Red;
             }
         }
 
