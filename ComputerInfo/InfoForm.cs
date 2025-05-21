@@ -1,14 +1,16 @@
-﻿using Microsoft.Win32;
+﻿using ComputerInfo.Properties;
+using Microsoft.Win32;
 using MySql.Data.MySqlClient;
 using System;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
-using ComputerInfo.Properties;
 
 namespace ComputerInfo
 {
     class InfoForm : Form
     {
+        // Declare UI components
         private TabControl tabControl;
         private TabPage infoTab;
         private TabPage settingsTab;
@@ -18,6 +20,7 @@ namespace ComputerInfo
         private ComboBox comboTipusServeis;
         private Label lblDbStatus;
 
+        // Constructor to initialize the form and its components
         public InfoForm(string computerName, string osInfo)
         {
             this.Text = "Informació de l'ordinador";
@@ -25,7 +28,7 @@ namespace ComputerInfo
             this.StartPosition = FormStartPosition.CenterScreen;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.ClientSize = new System.Drawing.Size(1000, 200);
+            this.ClientSize = new System.Drawing.Size(500, 200);
 
             tabControl = new TabControl
             {
@@ -97,17 +100,6 @@ namespace ComputerInfo
                 Width = 200,
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-            comboTipusServeis.Items.AddRange(new string[] { "No definit", "Arxiu", "Baixa", "Informàtica" });
-
-            if (!string.IsNullOrEmpty(Properties.Settings.Default.TipusServei) &&
-                comboTipusServeis.Items.Contains(Properties.Settings.Default.TipusServei))
-            {
-                comboTipusServeis.SelectedItem = Properties.Settings.Default.TipusServei;
-            }
-            else
-            {
-                comboTipusServeis.SelectedIndex = 0; // Default to the first item
-            }
 
             settingsTab.Controls.Add(comboTipusServeis);
 
@@ -120,19 +112,23 @@ namespace ComputerInfo
             };
             settingsTab.Controls.Add(lblDbStatus);
 
-            ComprovaConnexioBD();
-
             tabControl.TabPages.Add(infoTab);
             tabControl.TabPages.Add(settingsTab);
 
             this.Controls.Add(tabControl);
+
+            ComprovaConnexioBD();
+            CarregaTipusServeis();
+            MostraInfoUsuariIServei(computerName, osInfo);
         }
 
+        // event handler for the checkbox to set auto start
         private void ChkAutoStart_CheckedChanged(object sender, EventArgs e)
         {
             SetAutoStart(chkAutoStart.Checked);
         }
 
+        // checks if the application is set to start automatically with Windows
         private bool IsAutoStartEnabled()
         {
             using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", false))
@@ -141,6 +137,7 @@ namespace ComputerInfo
             }
         }
 
+        // sets the application to start automatically with Windows
         private void SetAutoStart(bool enable)
         {
             using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true))
@@ -156,6 +153,7 @@ namespace ComputerInfo
             }
         }
 
+        // checks the connection to the database and updates the label accordingly
         private void ComprovaConnexioBD()
         {
             try
@@ -176,6 +174,111 @@ namespace ComputerInfo
             }
         }
 
+        // loads the type of services from the database and updates the combo box
+        private void CarregaTipusServeis()
+        {
+            try
+            {
+                var env = EnvLoader.Load("config.env");
+                string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
+                using (var conn = new MySqlConnection(connStr))
+                {
+                    conn.Open();
+                    string sql = "SELECT distinct nom FROM serveis ORDER by nom";
+                    using (var cmd = new MySqlCommand(sql, conn))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        var serveis = new System.Collections.Generic.List<string>();
+
+                        serveis.Add("No definit");
+
+                        while (reader.Read())
+                        {
+                            serveis.Add(reader.GetString(0));
+                        }
+
+                        comboTipusServeis.Items.Clear();
+                        comboTipusServeis.Items.AddRange(serveis.ToArray());
+
+                        if (!string.IsNullOrEmpty(Properties.Settings.Default.TipusServei) &&
+                            comboTipusServeis.Items.Contains(Properties.Settings.Default.TipusServei))
+                        {
+                            comboTipusServeis.SelectedItem = Properties.Settings.Default.TipusServei;
+                        }
+                        else
+                        {
+                            comboTipusServeis.SelectedIndex = 0;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                comboTipusServeis.Items.Clear();
+                comboTipusServeis.Items.AddRange(new string[] { "No definit" });
+                comboTipusServeis.SelectedIndex = 0;
+                MessageBox.Show("Error carregant tipus de serveis: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // retrieves the user and service information from the database and displays it in the info tab
+        private void MostraInfoUsuariIServei(string computerName, string osInfo)
+        {
+            try
+            {
+                string codiAJT = new string(computerName.Where(char.IsDigit).ToArray());
+
+                var env = EnvLoader.Load("config.env");
+                string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
+                using (var conn = new MySqlConnection(connStr))
+                {
+                    conn.Open();
+                    string sql = @"SELECT usuaris.nomcognoms, serveis.nom
+                                   FROM elements
+                                   INNER JOIN usuaris ON usuaris.idusuari = elements.usuari
+                                   INNER JOIN serveis ON serveis.idservei = usuaris.servei_principal
+                                   WHERE elements.codiAJT = @codiAJT
+                                   LIMIT 1";
+                    using (var cmd = new MySqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@codiAJT", codiAJT);
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            string text;
+                            if (reader.Read())
+                            {
+                                string nomCognoms = reader.GetString(0);
+                                string servei = reader.GetString(1);
+                                text = $"Nom i cognoms: {nomCognoms}\nServei principal: {servei}";
+                            }
+                            else
+                            {
+                                text = "No s'ha trobat informació a la base de dades.";
+                            }
+                            var labelInfo = new Label
+                            {
+                                AutoSize = true,
+                                Location = new System.Drawing.Point(10, 40),
+                                Text = text
+                            };
+                            infoTab.Controls.Add(labelInfo);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var labelInfo = new Label
+                {
+                    AutoSize = true,
+                    Location = new System.Drawing.Point(10, 40),
+                    Text = "Error: " + ex.Message
+                };
+                infoTab.Controls.Add(labelInfo);
+            }
+        }
+
+        // saves the settings when the form is closing
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             Properties.Settings.Default.Nom = txtboxNom.Text;
