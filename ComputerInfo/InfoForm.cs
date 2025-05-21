@@ -15,8 +15,7 @@ namespace ComputerInfo
         private TabPage infoTab;
         private TabPage settingsTab;
         private CheckBox chkAutoStart;
-        private TextBox txtboxNom;
-        private TextBox txtboxCognoms;
+        private ComboBox comboUsuari;
         private ComboBox comboTipusServeis;
         private Label lblDbStatus;
 
@@ -56,47 +55,32 @@ namespace ComputerInfo
             chkAutoStart.CheckedChanged += ChkAutoStart_CheckedChanged;
             settingsTab.Controls.Add(chkAutoStart);
 
-            var labelNom = new Label
+            var labelUsuari = new Label
             {
-                Text = "Nom:",
+                Text = "Usuari:",
                 AutoSize = true,
                 Location = new System.Drawing.Point(10, 50)
             };
-            txtboxNom = new TextBox
+            comboUsuari = new ComboBox
             {
                 Location = new System.Drawing.Point(100, 50),
-                Width = 200
+                Width = 200,
+                DropDownStyle = ComboBoxStyle.DropDownList
             };
-            txtboxNom.Text = Properties.Settings.Default.Nom;
-            settingsTab.Controls.Add(labelNom);
-            settingsTab.Controls.Add(txtboxNom);
-
-            var labelCognoms = new Label
-            {
-                Text = "Cognoms:",
-                AutoSize = true,
-                Location = new System.Drawing.Point(10, 80)
-            };
-            txtboxCognoms = new TextBox
-            {
-                Location = new System.Drawing.Point(100, 80),
-                Width = 200
-            };
-            txtboxCognoms.Text = Properties.Settings.Default.Cognoms;
-            settingsTab.Controls.Add(labelCognoms);
-            settingsTab.Controls.Add(txtboxCognoms);
+            settingsTab.Controls.Add(labelUsuari);
+            settingsTab.Controls.Add(comboUsuari);
 
             var labelTipusServeis = new Label
             {
                 Text = "Tipus de servei:",
                 AutoSize = true,
-                Location = new System.Drawing.Point(10, 110)
+                Location = new System.Drawing.Point(10, 80)
             };
             settingsTab.Controls.Add(labelTipusServeis);
 
             comboTipusServeis = new ComboBox
             {
-                Location = new System.Drawing.Point(100, 110),
+                Location = new System.Drawing.Point(100, 80),
                 Width = 200,
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
@@ -118,6 +102,7 @@ namespace ComputerInfo
             this.Controls.Add(tabControl);
 
             ComprovaConnexioBD();
+            CarregaUsuaris();
             CarregaTipusServeis();
             MostraInfoUsuariIServei(computerName, osInfo);
         }
@@ -171,6 +156,49 @@ namespace ComputerInfo
             {
                 lblDbStatus.Text = "Error de connexió a la base de dades: " + ex.Message;
                 lblDbStatus.ForeColor = Color.Red;
+            }
+        }
+
+        // loads the names from the database and updates the combo box
+        private void CarregaUsuaris()
+        {
+            try
+            {
+                var env = EnvLoader.Load("config.env");
+                string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
+                using (var conn = new MySqlConnection(connStr))
+                {
+                    conn.Open();
+                    string sql = "SELECT distinct nomcognoms FROM usuaris ORDER by nomcognoms";
+                    using (var cmd = new MySqlCommand(sql, conn))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        var usuaris = new System.Collections.Generic.List<string>();
+                        usuaris.Add("No definit");
+                        while (reader.Read())
+                        {
+                            usuaris.Add(reader.GetString(0));
+                        }
+                        comboUsuari.Items.Clear();
+                        comboUsuari.Items.AddRange(usuaris.ToArray());
+                        if (!string.IsNullOrEmpty(Properties.Settings.Default.Nom) &&
+                            comboUsuari.Items.Contains(Properties.Settings.Default.Nom))
+                        {
+                            comboUsuari.SelectedItem = Properties.Settings.Default.Nom;
+                        }
+                        else
+                        {
+                            comboUsuari.SelectedIndex = 0;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                comboUsuari.Items.Clear();
+                comboUsuari.Items.AddRange(new string[] { "No definit" });
+                comboUsuari.SelectedIndex = 0;
+                MessageBox.Show("Error carregant usuaris: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -281,8 +309,7 @@ namespace ComputerInfo
         // saves the settings when the form is closing
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            Properties.Settings.Default.Nom = txtboxNom.Text;
-            Properties.Settings.Default.Cognoms = txtboxCognoms.Text;
+            Properties.Settings.Default.Nom = comboUsuari.SelectedItem?.ToString();
             Properties.Settings.Default.TipusServei = comboTipusServeis.SelectedItem?.ToString();
             Properties.Settings.Default.Save();
             base.OnFormClosing(e);
