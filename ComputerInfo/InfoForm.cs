@@ -5,6 +5,7 @@ using System;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using System.Net;
 
 namespace ComputerInfo
 {
@@ -43,6 +44,14 @@ namespace ComputerInfo
                        $"Sistema Operatiu: {osInfo}"
             };
             infoTab.Controls.Add(label);
+
+            var labelIp = new Label
+            {
+                AutoSize = true,
+                Location = new System.Drawing.Point(10, 80),
+                Text = $"IP local: {ObtenerIpLocal()}"
+            };
+            infoTab.Controls.Add(labelIp);
 
             settingsTab = new TabPage("Configuració");
             chkAutoStart = new CheckBox
@@ -167,6 +176,29 @@ namespace ComputerInfo
                     key.DeleteValue(Application.ProductName, false);
                 }
             }
+        }
+
+        // retrieves the computer local IP address
+        private string ObtenerIpLocal()
+        {
+            string ipLocal = "No disponible";
+            try
+            {
+                var host = Dns.GetHostEntry(Dns.GetHostName());
+                foreach (var ip in host.AddressList)
+                {
+                    if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    {
+                        ipLocal = ip.ToString();
+                        break;
+                    }
+                }
+            }
+            catch
+            {
+                ipLocal = "Error obtenint IP";
+            }
+            return ipLocal;
         }
 
         // checks the connection to the database and updates the label accordingly
