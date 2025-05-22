@@ -88,6 +88,15 @@ namespace ComputerInfo
 
             settingsTab.Controls.Add(comboTipusServeis);
 
+            var updateButton = new Button
+            {
+                Text = "Actualitzar",
+                Location = new System.Drawing.Point(10, 110),
+                Width = 80,
+            };
+            updateButton.Click += UpdateButton_Click;
+            settingsTab.Controls.Add(updateButton);
+
             lblDbStatus = new Label
             {
                 Text = "Comprovant connexió a la base de dades...",
@@ -436,6 +445,87 @@ namespace ComputerInfo
             Properties.Settings.Default.TipusServei = comboTipusServeis.SelectedItem?.ToString();
             Properties.Settings.Default.Save();
             base.OnFormClosing(e);
+        }
+
+        // event handler for the update button click
+        private void UpdateButton_Click(object sender, EventArgs e)
+        {
+            string usuari = comboUsuari.SelectedItem?.ToString();
+            string servei = comboTipusServeis.SelectedItem?.ToString();
+
+            if (string.IsNullOrEmpty(usuari) || usuari == "No definit" ||
+                string.IsNullOrEmpty(servei) || servei == "No definit")
+            {
+                MessageBox.Show("Selecciona un usuari i un tipis de servei vàlids.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            try
+            {
+                var env = EnvLoader.Load("config.env");
+                string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
+                using (var conn = new MySqlConnection(connStr))
+                {
+                    conn.Open();
+
+                    // obtaining the id of the selected service
+                    string sqlIdServei = "SELECT idservei FROM serveis WHERE nom = @nom LIMIT 1";
+                    int? idServei = null;
+                    using (var cmdServei = new MySqlCommand(sqlIdServei, conn))
+                    {
+                        cmdServei.Parameters.AddWithValue("@nom", servei);
+                        var result = cmdServei.ExecuteScalar();
+                        if (result != null && int.TryParse(result.ToString(), out int id))
+                            idServei = id;
+                    }
+                    if (idServei == null)
+                    {
+                        MessageBox.Show("No s'ha trobat el servei seleccionat.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    // obtaining the id of the selected user
+                    string sqlIdUsuari = "SELECT idusuari FROM usuaris WHERE nomcognoms = @nomcognoms LIMIT 1";
+                    int? idUsuari = null;
+                    using (var cmdUsuari = new MySqlCommand(sqlIdUsuari, conn))
+                    {
+                        cmdUsuari.Parameters.AddWithValue("@nomcognoms", usuari);
+                        var result = cmdUsuari.ExecuteScalar();
+                        if (result != null && int.TryParse(result.ToString(), out int id))
+                            idUsuari = id;
+                    }
+                    if (idUsuari == null)
+                    {
+                        MessageBox.Show("No s'ha trobat l'usuari seleccionat.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    //update the primary service of the selected user
+                    string sqlUpdateUsuari = "UPDATE usuaris SET servei_principal = @idServei WHERE idusuari = @idUsuari";
+                    using (var cmdUpdateUsuari = new MySqlCommand(sqlUpdateUsuari, conn))
+                    {
+                        cmdUpdateUsuari.Parameters.AddWithValue("@idServei", idServei.Value);
+                        cmdUpdateUsuari.Parameters.AddWithValue("@idUsuari", idUsuari.Value);
+                        cmdUpdateUsuari.ExecuteNonQuery();
+                    }
+
+                    //update the user associated with the computer
+                    string codiAJT = new string(Environment.MachineName.Where(char.IsDigit).ToArray());
+                    string sqlUpdateElements = "UPDATE elements SET usuari = @idUsuari WHERE codiAJT = @codiAJT";
+                    using (var cmdUpdateElements = new MySqlCommand(sqlUpdateElements, conn))
+                    {
+                        cmdUpdateElements.Parameters.AddWithValue("@idUsuari", idUsuari.Value);
+                        cmdUpdateElements.Parameters.AddWithValue("@codiAJT", codiAJT);
+                        cmdUpdateElements.ExecuteNonQuery();
+                    }
+
+                    MessageBox.Show("Actualització realitzada correctament!", "Informació", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error actualitzant la base de dades: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }
