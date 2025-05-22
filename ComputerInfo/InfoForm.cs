@@ -67,6 +67,7 @@ namespace ComputerInfo
                 Width = 200,
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
+            comboUsuari.SelectedIndexChanged += ComboUsuari_SelectedIndexChanged;
             settingsTab.Controls.Add(labelUsuari);
             settingsTab.Controls.Add(comboUsuari);
 
@@ -102,8 +103,29 @@ namespace ComputerInfo
             this.Controls.Add(tabControl);
 
             ComprovaConnexioBD();
+
+            // 1. Remove the event handler before loading data
+            comboUsuari.SelectedIndexChanged -= ComboUsuari_SelectedIndexChanged;
+
             CarregaUsuaris();
             CarregaTipusServeis();
+
+            // 2. Select the user after loading both ComboBox
+            string codiAJT = new string(computerName.Where(char.IsDigit).ToArray());
+            string nomcognoms = ObtenerNomcognomsPorCodiAJT(codiAJT);
+            if (!string.IsNullOrEmpty(nomcognoms) && comboUsuari.Items.Contains(nomcognoms))
+            {
+                comboUsuari.SelectedItem = nomcognoms;
+            }
+            else if (comboUsuari.Items.Count > 0)
+            {
+                comboUsuari.SelectedIndex = 0;
+            }
+
+            // 3. Re-enable the event handler and call it manually to update the service
+            comboUsuari.SelectedIndexChanged += ComboUsuari_SelectedIndexChanged;
+            ComboUsuari_SelectedIndexChanged(comboUsuari, EventArgs.Empty);
+
             MostraInfoUsuariIServei(computerName, osInfo);
         }
 
@@ -181,12 +203,14 @@ namespace ComputerInfo
                         }
                         comboUsuari.Items.Clear();
                         comboUsuari.Items.AddRange(usuaris.ToArray());
+                        if (comboUsuari.Items.Count == 0)
+                            return;
                         if (!string.IsNullOrEmpty(Properties.Settings.Default.Nom) &&
                             comboUsuari.Items.Contains(Properties.Settings.Default.Nom))
                         {
                             comboUsuari.SelectedItem = Properties.Settings.Default.Nom;
                         }
-                        else
+                        else if (comboUsuari.Items.Count > 0)
                         {
                             comboUsuari.SelectedIndex = 0;
                         }
@@ -197,8 +221,80 @@ namespace ComputerInfo
             {
                 comboUsuari.Items.Clear();
                 comboUsuari.Items.AddRange(new string[] { "No definit" });
-                comboUsuari.SelectedIndex = 0;
+                if (comboUsuari.Items.Count > 0)
+                {
+                    comboUsuari.SelectedIndex = 0;
+                }
                 MessageBox.Show("Error carregant usuaris: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // event handler for the combo box to handle user selection changes
+        private void ComboUsuari_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (comboUsuari.Items.Count == 0)
+                return;
+
+            string usuariSeleccionat = comboUsuari.SelectedItem?.ToString();
+            if (!string.IsNullOrEmpty(usuariSeleccionat) && usuariSeleccionat != "No definit")
+            {
+                string tipusServei = ObtenerTipusServeiDeUsuari(usuariSeleccionat);
+                if (!string.IsNullOrEmpty(tipusServei) && comboTipusServeis.Items.Contains(tipusServei))
+                {
+                    comboTipusServeis.SelectedItem = tipusServei;
+                }
+                else if (comboTipusServeis.Items.Count > 0)
+                {
+                    comboTipusServeis.SelectedIndex = 0;
+                }
+            }
+            else if (comboTipusServeis.Items.Count > 0)
+            {
+                comboTipusServeis.SelectedIndex = 0;
+            }
+        }
+
+        // retrieves the service type for the selected user from the database
+        private string ObtenerTipusServeiDeUsuari(string nomcognoms)
+        {
+            try
+            {
+                var env = EnvLoader.Load("config.env");
+                string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
+                using (var conn = new MySqlConnection(connStr))
+                {
+                    conn.Open();
+                    // Primero obtenemos el idusuari a partir del nombre completo
+                    string sqlId = "SELECT idusuari FROM usuaris WHERE nomcognoms = @nomcognoms LIMIT 1";
+                    int? idusuari = null;
+                    using (var cmdId = new MySqlCommand(sqlId, conn))
+                    {
+                        cmdId.Parameters.AddWithValue("@nomcognoms", nomcognoms);
+                        var result = cmdId.ExecuteScalar();
+                        if (result != null && int.TryParse(result.ToString(), out int id))
+                            idusuari = id;
+                    }
+                    if (idusuari == null)
+                        return null;
+
+                    // Ahora buscamos el servicio principal usando la tabla elements
+                    string sql = @"SELECT serveis.nom
+                           FROM elements
+                           INNER JOIN usuaris ON usuaris.idusuari = elements.usuari
+                           INNER JOIN serveis ON serveis.idservei = usuaris.servei_principal
+                           WHERE elements.usuari = @idusuari
+                           LIMIT 1";
+                    using (var cmd = new MySqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@idusuari", idusuari.Value);
+                        var result = cmd.ExecuteScalar();
+                        return result?.ToString();
+                    }
+                }
+            }
+            catch
+            {
+                return null;
             }
         }
 
@@ -217,9 +313,7 @@ namespace ComputerInfo
                     using (var reader = cmd.ExecuteReader())
                     {
                         var serveis = new System.Collections.Generic.List<string>();
-
                         serveis.Add("No definit");
-
                         while (reader.Read())
                         {
                             serveis.Add(reader.GetString(0));
@@ -303,6 +397,35 @@ namespace ComputerInfo
                     Text = "Error: " + ex.Message
                 };
                 infoTab.Controls.Add(labelInfo);
+            }
+        }
+
+        // retrieves the full name of the user based on the codiAJT from the database
+        private string ObtenerNomcognomsPorCodiAJT(string codiAJT)
+        {
+            try
+            {
+                var env = EnvLoader.Load("config.env");
+                string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
+                using (var conn = new MySqlConnection(connStr))
+                {
+                    conn.Open();
+                    string sql = @"SELECT usuaris.nomcognoms
+                                   FROM elements
+                                   INNER JOIN usuaris ON usuaris.idusuari = elements.usuari
+                                   WHERE elements.codiAJT = @codiAJT
+                                   LIMIT 1";
+                    using (var cmd = new MySqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@codiAJT", codiAJT);
+                        var result = cmd.ExecuteScalar();
+                        return result?.ToString();
+                    }
+                }
+            }
+            catch
+            {
+                return null;
             }
         }
 
