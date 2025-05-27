@@ -500,7 +500,7 @@ namespace ComputerInfo
                 {
                     conn.Open();
 
-                    // obtaining the id of the selected service
+                    // Obtain the id from the selected service
                     string sqlIdServei = "SELECT idservei FROM serveis WHERE nom = @nom LIMIT 1";
                     int? idServei = null;
                     using (var cmdServei = new MySqlCommand(sqlIdServei, conn))
@@ -516,7 +516,7 @@ namespace ComputerInfo
                         return;
                     }
 
-                    // obtaining the id of the selected user
+                    // Obtain the id of the selected user
                     string sqlIdUsuari = "SELECT idusuari FROM usuaris WHERE nomcognoms = @nomcognoms LIMIT 1";
                     int? idUsuari = null;
                     using (var cmdUsuari = new MySqlCommand(sqlIdUsuari, conn))
@@ -532,23 +532,24 @@ namespace ComputerInfo
                         return;
                     }
 
-                    //update the primary service of the selected user
+                    // Update the service and user in the elements table for the AJT code
+                    string codiAJT = new string(Environment.MachineName.Where(char.IsDigit).ToArray());
+                    string sqlUpdateElements = "UPDATE elements SET servei = @idServei, usuari = @idUsuari WHERE codiAJT = @codiAJT";
+                    using (var cmdUpdateElements = new MySqlCommand(sqlUpdateElements, conn))
+                    {
+                        cmdUpdateElements.Parameters.AddWithValue("@idServei", idServei.Value);
+                        cmdUpdateElements.Parameters.AddWithValue("@idUsuari", idUsuari.Value);
+                        cmdUpdateElements.Parameters.AddWithValue("@codiAJT", codiAJT);
+                        cmdUpdateElements.ExecuteNonQuery();
+                    }
+
+                    // This is optional, to update the primary service of the selected user
                     string sqlUpdateUsuari = "UPDATE usuaris SET servei_principal = @idServei WHERE idusuari = @idUsuari";
                     using (var cmdUpdateUsuari = new MySqlCommand(sqlUpdateUsuari, conn))
                     {
                         cmdUpdateUsuari.Parameters.AddWithValue("@idServei", idServei.Value);
                         cmdUpdateUsuari.Parameters.AddWithValue("@idUsuari", idUsuari.Value);
                         cmdUpdateUsuari.ExecuteNonQuery();
-                    }
-
-                    //update the user associated with the computer
-                    string codiAJT = new string(Environment.MachineName.Where(char.IsDigit).ToArray());
-                    string sqlUpdateElements = "UPDATE elements SET usuari = @idUsuari WHERE codiAJT = @codiAJT";
-                    using (var cmdUpdateElements = new MySqlCommand(sqlUpdateElements, conn))
-                    {
-                        cmdUpdateElements.Parameters.AddWithValue("@idUsuari", idUsuari.Value);
-                        cmdUpdateElements.Parameters.AddWithValue("@codiAJT", codiAJT);
-                        cmdUpdateElements.ExecuteNonQuery();
                     }
 
                     MessageBox.Show("Actualització realitzada correctament!", "Informació", MessageBoxButtons.OK, MessageBoxIcon.Information);
