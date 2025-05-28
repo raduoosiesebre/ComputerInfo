@@ -11,6 +11,9 @@ namespace ComputerInfo
 {
     class InfoForm : Form
     {
+        // Declare the path to the environment configuration file
+        private readonly string envPath;
+
         // Declare UI components
         private TabControl tabControl;
         private TabPage infoTab;
@@ -23,6 +26,14 @@ namespace ComputerInfo
         // Constructor to initialize the form and its components
         public InfoForm(string computerName, string osInfo)
         {
+            envPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.env");
+            if (!System.IO.File.Exists(envPath))
+            {
+                MessageBox.Show("No s'ha trobat el fitxer de configuració config.env.\nContacta amb l'administrador.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.Exit();
+                return;
+            }
+
             this.Text = "Informació de l'ordinador";
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -206,7 +217,7 @@ namespace ComputerInfo
         {
             try
             {
-                var env = EnvLoader.Load("config.env");
+                var env = EnvLoader.Load(envPath);
                 string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
                 using (var conn = new MySqlConnection(connStr))
                 {
@@ -227,7 +238,7 @@ namespace ComputerInfo
         {
             try
             {
-                var env = EnvLoader.Load("config.env");
+                var env = EnvLoader.Load(envPath);
                 string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
                 using (var conn = new MySqlConnection(connStr))
                 {
@@ -300,11 +311,11 @@ namespace ComputerInfo
         {
             try
             {
-                var env = EnvLoader.Load("config.env");
+                var env = EnvLoader.Load(envPath);
                 string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
                 using (var conn = new MySqlConnection(connStr))
                 {
-                    conn.Open();
+                    conn.Open();        
                     // Primero obtenemos el idusuari a partir del nombre completo
                     string sqlId = "SELECT idusuari FROM usuaris WHERE nomcognoms = @nomcognoms LIMIT 1";
                     int? idusuari = null;
@@ -344,7 +355,7 @@ namespace ComputerInfo
         {
             try
             {
-                var env = EnvLoader.Load("config.env");
+                var env = EnvLoader.Load(envPath);
                 string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
                 using (var conn = new MySqlConnection(connStr))
                 {
@@ -391,7 +402,7 @@ namespace ComputerInfo
             {
                 string codiAJT = new string(computerName.Where(char.IsDigit).ToArray());
 
-                var env = EnvLoader.Load("config.env");
+                var env = EnvLoader.Load(envPath);
                 string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
                 using (var conn = new MySqlConnection(connStr))
                 {
@@ -446,7 +457,7 @@ namespace ComputerInfo
         {
             try
             {
-                var env = EnvLoader.Load("config.env");
+                var env = EnvLoader.Load(envPath);
                 string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
                 using (var conn = new MySqlConnection(connStr))
                 {
@@ -494,7 +505,7 @@ namespace ComputerInfo
 
             try
             {
-                var env = EnvLoader.Load("config.env");
+                var env = EnvLoader.Load(envPath);
                 string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
                 using (var conn = new MySqlConnection(connStr))
                 {
