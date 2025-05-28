@@ -484,7 +484,7 @@ namespace ComputerInfo
         {
             string usuari = comboUsuari.SelectedItem?.ToString();
             string servei = comboTipusServeis.SelectedItem?.ToString();
-
+             
             if (string.IsNullOrEmpty(usuari) || usuari == "No definit" ||
                 string.IsNullOrEmpty(servei) || servei == "No definit")
             {
