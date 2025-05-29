@@ -58,5 +58,17 @@ namespace ComputerInfo.Properties {
                 this["TipusServei"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2000-01-01")]
+        public global::System.DateTime UltimaActualizacioIP {
+            get {
+                return ((global::System.DateTime)(this["UltimaActualizacioIP"]));
+            }
+            set {
+                this["UltimaActualizacioIP"] = value;
+            }
+        }
     }
 }

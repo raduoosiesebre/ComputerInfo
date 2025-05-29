@@ -156,6 +156,8 @@ namespace ComputerInfo
             ComboUsuari_SelectedIndexChanged(comboUsuari, EventArgs.Empty);
 
             MostraInfoUsuariIServei(computerName, osInfo);
+
+            ActualitzaIpSiCorrespon(codiAJT);
         }
 
         // event handler for the checkbox to set auto start
@@ -478,6 +480,40 @@ namespace ComputerInfo
             catch
             {
                 return null;
+            }
+        }
+
+        // update the IP address to the database
+        private void ActualitzaIpSiCorrespon(string codiAJT)
+        {
+            DateTime lastUpdated = Properties.Settings.Default.UltimaActualizacioIP;
+            if ((DateTime.Now - lastUpdated).TotalHours < 24)
+            {
+                return;
+            }
+
+            string ipLocal = ObtenerIpLocal();
+            try
+            {
+                var env = EnvLoader.Load(envPath);
+                string connStr = $"Server={env["MYSQL_HOST"]};Port={env["MYSQL_PORT"]};Database={env["MYSQL_DATABASE"]};Uid={env["MYSQL_USER"]};Pwd={env["MYSQL_PASSWORD"]};";
+                using (var conn = new MySqlConnection(connStr))
+                {
+                    conn.Open();
+                    string sql = "UPDATE elements SET ip = @ip WHERE codiAJT = @codiAJT";
+                    using (var cmd = new MySqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@ip", ipLocal);
+                        cmd.Parameters.AddWithValue("@codiAJT", codiAJT);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                Properties.Settings.Default.UltimaActualizacioIP = DateTime.Now;
+                Properties.Settings.Default.Save();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error actualitzant la IP a la base de dades: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
