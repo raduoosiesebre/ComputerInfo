@@ -26,6 +26,7 @@ namespace ComputerInfo
         // Constructor to initialize the form and its components
         public InfoForm(string computerName, string osInfo)
         {
+            // Load the environment configuration file path
             envPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.env");
             if (!System.IO.File.Exists(envPath))
             {
@@ -34,6 +35,7 @@ namespace ComputerInfo
                 return;
             }
 
+            // Initialize the form properties
             this.Text = "Informació de l'ordinador";
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -46,6 +48,7 @@ namespace ComputerInfo
                 Dock = DockStyle.Fill
             };
 
+            // Create the tabs for information and settings
             infoTab = new TabPage("Informació");
             var label = new Label
             {
@@ -131,11 +134,13 @@ namespace ComputerInfo
 
             this.Controls.Add(tabControl);
 
+            // Check the connection to the database and load the user and service data
             ComprovaConnexioBD();
 
             // 1. Remove the event handler before loading data
             comboUsuari.SelectedIndexChanged -= ComboUsuari_SelectedIndexChanged;
 
+            // Load the user and service data
             CarregaUsuaris();
             CarregaTipusServeis();
 
@@ -614,11 +619,13 @@ namespace ComputerInfo
             }
         }
 
+        // checks if the computer name is valid according to the specified pattern
         bool EsNombrePCValido(string computerName)
         {
             return System.Text.RegularExpressions.Regex.IsMatch(computerName, @"^WS\d{4}$");
         }
 
+        // sends an email notification if the computer name is invalid
         void EnviaEmailAviso(string nombrePC, string ip)
         {
             try
