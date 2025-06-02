@@ -165,10 +165,10 @@ namespace ComputerInfo
             ActualitzaIpSiCorrespon(codiAJT);
 
             // Check if the computer name is valid and send an email if not
-            if (!EsNombrePCValido(computerName))
-            {
-                EnviaEmailAviso(computerName, ObtenerIpLocal());
-            }
+            //if (!EsNombrePCValido(computerName))
+            //{
+            //    EnviaEmailAviso(computerName, ObtenerIpLocal());
+            //}
         }
 
         // event handler for the checkbox to set auto start
@@ -620,35 +620,35 @@ namespace ComputerInfo
         }
 
         // checks if the computer name is valid according to the specified pattern
-        bool EsNombrePCValido(string computerName)
-        {
-            return System.Text.RegularExpressions.Regex.IsMatch(computerName, @"^WS\d{4}$");
-        }
+        //bool EsNombrePCValido(string computerName)
+        //{
+        //    return System.Text.RegularExpressions.Regex.IsMatch(computerName, @"^WS\d{4}$");
+        //}
 
         // sends an email notification if the computer name is invalid
-        void EnviaEmailAviso(string nombrePC, string ip)
-        {
-            try
-            {
-                var env = EnvLoader.Load(envPath);
-                var smtp = new System.Net.Mail.SmtpClient(env["SMTP_HOST"], int.Parse(env["SMTP_PORT"]))
-                {
-                    Credentials = new System.Net.NetworkCredential(env["SMTP_USER"], env["SMTP_PASS"]),
-                    EnableSsl = true
-                };
+        //void EnviaEmailAviso(string nombrePC, string ip)
+        //{
+        //    try
+        //    {
+        //        var env = EnvLoader.Load(envPath);
+        //        var smtp = new System.Net.Mail.SmtpClient(env["SMTP_HOST"], int.Parse(env["SMTP_PORT"]))
+        //        {
+        //            Credentials = new System.Net.NetworkCredential(env["SMTP_USER"], env["SMTP_PASS"]),
+        //            EnableSsl = true
+        //        };
 
-                var mail = new System.Net.Mail.MailMessage();
-                mail.From = new System.Net.Mail.MailAddress(env["SMTP_FROM"]);
-                mail.To.Add(env["SMTP_TO"]);
-                mail.Subject = "Nom de PC incorrecte";
-                mail.Body = $"Nom de PC: {nombrePC}\nIP: {ip}";
+        //        var mail = new System.Net.Mail.MailMessage();
+        //        mail.From = new System.Net.Mail.MailAddress(env["SMTP_FROM"]);
+        //        mail.To.Add(env["SMTP_TO"]);
+        //        mail.Subject = "Nom de PC incorrecte";
+        //        mail.Body = $"Nom de PC: {nombrePC}\nIP: {ip}";
 
-                smtp.Send(mail);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error enviant l'email d'avís: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
+        //        smtp.Send(mail);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show("Error enviant l'email d'avís: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        //    }
+        //}
     }
 }
